@@ -104,7 +104,7 @@ WPR <- c("Australia", "Brunei", "Cambodia", "China", "Cook Islands", "Fiji",
          "Micronesia", "Mongolia", "Nauru", "New Zealand", "Niue", "Palau", 
          "Papua New Guinea", "Philippines", "Samoa", "Singapore", 
          "Solomon Islands", "South Korea", "Taiwan", "Tonga", "Tuvalu", 
-         "Vanuatu", "Vietnam")
+         "Vanuatu", "Vietnam", "Hong Kong")
 
 #function to identify world regions from country names
 get_world_region <- function(x, y = NULL){

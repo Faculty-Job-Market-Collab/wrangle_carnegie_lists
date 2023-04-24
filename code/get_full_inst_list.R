@@ -1,92 +1,53 @@
 library(tidyverse) #for data wrangling
-library(data.table) #for setnames()
 
-#correllary to %in% function
+#corollary to %in% function
 `%not_in%` <- Negate(`%in%`)
 
-#load full data files
-data_files <- c("data/2019-2020_raw_job_survey_data.csv",
-                "data/2020-2021_raw_job_survey_data.csv",
-                "data/2021-2022_raw_job_survey_data.csv")
+#load full data file----
+raw_data <- read_csv("data/merged_data_19-22.csv") %>% 
+  select(id, contains("instit")) %>% 
+  select(-num_institution_contacted)
 
-raw_data <- map(data_files, read_csv) #load data files
-
-#get questions & column names
-q_list_19 <- read_csv("data/question_legend_19.csv") #csv of q numbers, full q, & column names for 2019-2020 data
-
-q_list_20 <- read_csv("data/question_legend_20-22.csv") #csv of q numbers, full q, & column names for 2020-2022 data
-
-q_num_19 <- q_list_19 %>% pull(Q_number)#list of q numbers for 2019-2020
-
-q_num_20 <- q_list_20 %>% pull(Q_number)#list of q numbers for 2020-2022
-
-q_data_19 <- q_list_19 %>% pull(Data) #list of column names for 2019-2020
-
-q_data_20 <- q_list_20 %>% pull(Data) #list of column names for 2020-2022
-
-#drop extra columns & fix data column names
-data_19 <- raw_data[[1]][-c(1,2),] %>% #drop non-data rows
-  select(-(1:17)) #drop unnecessary data columns
-
-setnames(data_19, old = q_num_19, new = q_data_19) #rename columns
-
-data_20 <- raw_data[[2]][-c(1,2),] %>% #drop non-data rows
-  select(-(1:17)) #drop unnecessary data columns
-
-setnames(data_20, old = q_num_20, new = q_data_20) #rename columns
-
-data_21 <- raw_data[[3]][-c(1,2),] %>% #drop non-data rows
-  select(-(1:17)) #drop unnecessary data columns
-
-setnames(data_21, old = q_num_20, new = q_data_20) #rename columns
-
-#collect institution names
-data_19_inst <- data_19 %>% 
-  select(contains("instit")) %>% 
-  select(-num_institution_contacted) %>% 
-  mutate(survey_year = "2019-2020") %>% 
-  rowid_to_column("id")
-
-data_20_inst <- data_20 %>% 
-  select(contains("instit")) %>% 
-  select(-num_institution_contacted) %>% 
-  mutate(survey_year = "2020-2021") %>% 
-  rowid_to_column("id")
-
-data_21_inst <- data_21 %>% 
-  select(contains("instit")) %>% 
-  select(-num_institution_contacted) %>% 
-  mutate(survey_year = "2021-2022") %>% 
-  rowid_to_column("id")
-
-#separate lists of institutions separated by ";"
-raw_inst_list <- rbind(data_19_inst, data_20_inst, data_21_inst) %>% 
-  gather(on_site_institutions:postdoc_institution, 
-         key = "inst_type", value = "inst_name") %>% 
-  distinct() %>% 
-  filter(!is.na(inst_name)) %>% 
-  mutate(inst_name = str_to_title(inst_name)) %>% 
+#separate lists of institutions separated by ";"----
+raw_inst_list <- raw_data %>%  
+  gather(2:6, key = "inst_type", value = "inst_name") %>% 
+  distinct() %>%
+  mutate(inst_name = if_else(is.na(inst_name), "NR", inst_name),#add placeholder for missing responses
+         inst_name = str_to_title(inst_name)) %>% 
   separate("inst_name", c("x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", 
                           "x9", "x10", "x11", "x12", "x13", "x14", "x15", 
-                          "x16", "x17", "x18", "x19", "x20", "x21", "x22"), 
+                          "x16", "x17", "x18", "x19", "x20", "x21", "x22",
+                          "x23", "x24", "x25", "x26", "x27", "x28", "x29"), 
            sep = ";", extra = "merge") %>% 
-  gather(x1:x22, key = "x_col", value = "inst_name") %>% 
+  gather(x1:x29, key = "x_col", value = "inst_name") %>% 
   select(-x_col) %>% 
-  filter(!is.na("inst_name") & str_detect(inst_name, "[[:digit:]]") == FALSE)
+  filter(!is.na("inst_name"))# & str_detect(inst_name, "[[:digit:]]") == FALSE)
 
-#separate institution lists by ","
-comma_drop_list <- c(9, 14, 20, 24, 32, 36, 39, 42, 44, 48, 53, 58, 
-                     67, 71, 77, 79, 81:83, 87, 89, 93, 95, 100, 103, 
-                     106:108, 111, 114:193, 195, 197:200, 203, 205, 206,
-                     213, 214, 217, 219, 220, 223:226, 230, 236, 
-                     240:244, 246, 247, 249:252, 255:259, 261:265,
-                     270:275, 277:279, 281:285, 287, 289, 291:297, 
-                     299:310)
+#separate institution lists by ","----
+comma_drop_list <- c(12, 19, 23, 25, 29, 37, 40, 50, 55, 58, 59, 61,
+                     64, 79, 80, 93, 94, 100, 116, 121, 127, 131, 139, 
+                     143, 146, 149, 151, 155, 159, 161, 166, 175, 179, 
+                     181, 184, 187, 189, 191, 194, 200, 204,
+                     206, 211, 213, 215, 218:220, 223:225, 227, 
+                     229:271, 273:275, 277:322, 324, 326, 327, 329:331,
+                     334, 335, 337, 338, 345, 346, 349, 351:354,
+                     357, 358, 360:363, 366, 367, 368, 374, 377, 379:388,
+                     390:395, 398:404, 406:410, 412, 413,
+                     415, 417:422, 424:433, 435, 436, 438, 439, 441:447,
+                     449:459, 462, 464:470, 472, 473, 475:478, 
+                     480, 481, 483:486, 488:499, 501:507, 509:522, 524:546
+                     ) #entries with commas that are not lists
+
+other_split_list <- c(75, 155, 177, 178, 184, 185, 
+                      196, 205, 211, 219, 220)#lists split with punctuation other than commas or semicolons
 
 comma_inst_list <- raw_inst_list %>%
-  filter(str_count(inst_name, "Univ") >= 2 | str_detect(inst_name, "in Can|,") == TRUE) %>% #find remaining institution lists
+  filter(str_count(inst_name, "Univ") >= 2 | str_detect(inst_name, "in Can|,|And") == TRUE | 
+           str_detect(inst_name, "Uni.*Coll|Coll.*Uni")
+         ) %>% #find remaining institution lists
   #filter(inst_type != "phd_institution") %>% #only 1 phd inst should be named, drop these entries
-  slice(-comma_drop_list) #drop names of single institutions w/ a comma
+  slice(-comma_drop_list) %>% #drop names of single institutions w/ a comma
+  slice(-other_split_list) 
 
 comma_names <- comma_inst_list %>% pull(inst_name) #full list of items to split by comma
 
@@ -94,15 +55,51 @@ comma_split_data <- comma_inst_list %>% #split inst names by comma
   mutate(inst_name = str_replace(inst_name, 
                                  "University - University", 
                                  "University, University")) %>% 
-  separate("inst_name", c("x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9"), 
+  separate("inst_name", c("x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8", "x9",
+                          "x10", "x11", "x12", "x13", "x14"), 
            sep = ",", extra = "merge") %>% #max list of 8
-  gather(x1:x9, key = "x_col", value = "inst_name") %>% 
+  gather(x1:x14, key = "x_col", value = "inst_name") %>% 
   select(-x_col) %>% 
   filter(!is.na(inst_name))
 
-#list of unis from survey data - separated into individual rows
-split_inst_list <- rbind(raw_inst_list, comma_split_data) %>% 
-  filter(inst_name %not_in% comma_names) #remove items not split by comma
+#split lists using other forms of punctuation----
+other_inst_list <- raw_inst_list %>%
+  filter(str_count(inst_name, "Univ") >= 2 | str_detect(inst_name, "in Can|,|And") == TRUE | 
+           str_detect(inst_name, "Uni.*Coll|Coll.*Uni")) %>% #find remaining institution lists
+  #filter(inst_type != "phd_institution") %>% #only 1 phd inst should be named, drop these entries
+  slice(-comma_drop_list) %>% #drop names of single institutions w/ a comma
+  slice(other_split_list)
 
+other_names <- other_inst_list %>% pull(inst_name) #full list of items to split by comma
+
+other_split_data <- other_inst_list %>% #split inst names by comma
+  mutate(inst_name = str_replace(inst_name, 
+                                 "University - University", 
+                                 "University, University"),
+         inst_name = str_replace(inst_name, 
+                                 "Of Cincinnatil University Of ",
+                                 "Of Cincinnati, University Of "),
+         inst_name = str_remove_all(inst_name, 
+                                 "Medschool,"),
+         inst_name = str_replace(inst_name,
+                                 " \\(.* Of Chicago\\)",
+                                 ", University of Chicago"),
+         inst_name = str_replace(inst_name,
+                                 "1 Wayne.* India",
+                                 "Wayne State University, National Chemical Laboratory India")) %>% 
+  separate("inst_name", c("x1", "x2", "x3", "x4"), 
+           sep = ",|\\.|:|And (?!Design)|\\(|\\)", extra = "merge") %>% #max list of 8
+  gather(x1:x4, key = "x_col", value = "inst_name") %>% 
+  select(-x_col) %>% 
+  filter(!is.na(inst_name))
+
+#repair missing data----
+
+#list of unis from survey data separated into individual rows----
+split_inst_list <- rbind(raw_inst_list, comma_split_data, other_split_data) %>% 
+  filter(inst_name %not_in% comma_names) %>% #remove items not split by semicolon
+  filter(inst_name %not_in% other_names) #remove items not split by semicolon or comma
+
+#save final list as csv----
 write_csv(split_inst_list, paste0("output/full_inst_list_2019-2022_", 
                                   Sys.Date(), ".csv"))

@@ -1,75 +1,65 @@
 #read in data for setup----
-#data and functions for US & world regions
+library(tidyverse)
+library(readxl)
+#data and functions for US & world regions----
 source("code/get_regions.R")
 
-source("code/get_final_match_functions.R")
-
+#pull in datasets----
 #cleaned full Carnegie data set
-clean_carn_data <- read_csv("data/clean_carnegie_data.csv") %>% 
+clean_carn_data <- read_csv("output/cleaned_carnegie_data_2023-03-28.csv") %>% 
   select(NAME, STABBR, DOCRSDEG, HBCU, HSI, MSI, `S&ER&D`, 
          SOCSC_RSD, STEM_RSD, LANDGRNT,	MEDICAL,	TRIBAL, WOMENS)
 
 #cleaned list of unique respondent-provided institutions
-clean_surv_inst <- read_csv("data/cleaned_survey_inst.csv")
+clean_surv_inst <- read_csv("output/cleaned_survey_inst_2023-04-11.csv")
 
-#data set of unique respondent-provided institutions that matched Carnegie-listed instituttions
-all_matches <- read_csv("data/carnegie_inst_matches.csv")
+#data set of unique respondent-provided institutions matched with listed institutions
+#nr_row <- data.frame(inst_name = "Nr", NAME = "Nr")
+
+all_matches <- read_csv("output/carnegie_inst_matches_2023-04-11.csv") #%>% 
+  #rows_insert(nr_row)
 
 #data set of non-carn universities/institutions
-non_carn_unis <- read_csv("data/non-carnegie_unis.csv") %>% ## Need to work on matching inst names for non-carn inst
+non_carn_unis <- read_csv("data/non-carnegie_unis.csv") %>% 
+  select(-inst_prestige) %>% 
   mutate(Institution = str_to_title(Institution),
          Institution = str_remove_all(Institution, "'"),
-         `Full Institution Name` = str_remove_all(
-           `Full Institution Name`, "'"),
-         `Full Institution Name` = str_to_title(
-           `Full Institution Name`))
+         STABBR = "",
+         US_region = "",
+         HBCU = "", HSI = "", MSI = "", `S&ER&D` = "", 
+         SOCSC_RSD = "", STEM_RSD = "", LANDGRNT = "",	
+         MEDICAL = "",	TRIBAL = "", WOMENS = "") %>% 
+  rename(NAME = Institution)
 
 #Merge US region w/ carn data ----
 region_carnegie_join <- left_join(clean_carn_data, us_regions, 
                       by = c("STABBR" = "State_abbvr")) %>% 
   #select(-STABBR) %>% 
   distinct() %>% 
-  mutate(PUI_RI = if_else(DOCRSDEG >= 21, "RI", "PUI")) #determine ri vs pui status
-
-#Reduce Carnegie/region data using respondent-provided inst matches
-short_carnegie_data <- all_matches %>% 
-  select(-inst_name) %>% 
-  left_join(., region_carnegie_join, by = c("NAME")) %>% 
+  mutate(PUI_RI = if_else(DOCRSDEG >= 21, "RI", "PUI")) %>% #determine ri vs pui status
   rename(US_region = Region, State_Providence = State_name) %>% 
-  mutate(Country = "USA")
+  mutate(Country = "USA", 
+         Other_inst_type = "US college or university") %>% 
+  select(-DOCRSDEG) %>% 
+  rbind(., non_carn_unis) %>% 
+  rowid_to_column(var = "inst_id")
 
 #Join data set w/ Carnegie/region data----
-carn_survey_inst <- left_join(clean_surv_inst, all_matches, 
+matched_survey_inst <- left_join(clean_surv_inst, all_matches, 
                                   by = "inst_name") %>% 
-  filter(!is.na(NAME)) %>% 
-  left_join(., short_carnegie_data, by = "NAME")
-
-#identify & prep non-Carnegie institutions----
-non_carn_survey_inst <- left_join(clean_surv_inst, all_matches, 
-                     by = "inst_name") %>% 
-  filter(is.na(NAME)) %>% 
-  mutate(inst_name = map(inst_name, fix_non_carn),
-         inst_name = unlist(inst_name))
-
-#merge non-carn data w/ inst missing data----
-non_carn_join <- left_join(non_carn_survey_inst, non_carn_unis, 
-                           by = c("inst_name" = "Institution")) %>% 
-  left_join(., non_carn_unis, 
-            by = c("inst_name" = "Full Institution Name")) %>% 
-  mutate(State_Providence = if_else(!is.na(State_Providence.x), State_Providence.x, State_Providence.y),
-         Country = if_else(!is.na(Country.x), Country.x, Country.y),
-         PUI_RI = if_else(!is.na(PUI_RI.x), PUI_RI.x, PUI_RI.y),
-         Other_inst_type = if_else(!is.na(Other_inst_type.x), Other_inst_type.x, Other_inst_type.y)) %>% 
-  select(-contains(".x"), -contains(".y")) %>% 
-  left_join(., us_regions, by = c("State_Providence" = "State_abbvr")) %>% 
-  select(-State_name) %>% 
-  rename(US_region = Region, NAME = inst_name) %>% 
+  #filter(!is.na(NAME)) %>% 
+  left_join(., region_carnegie_join, by = "NAME") %>% 
   mutate(world_region = map(Country, get_world_region),
-         world_region = unlist(world_region))
+         world_region = unlist(world_region)) %>% 
+  distinct()
 
-all_inst_data <- bind_rows(carn_region_join, non_carn_join) %>% 
-  mutate(world_region = if_else(is.na(world_region), Country, world_region))
-
+#get unique inst identifiers
+all_inst_data <- matched_survey_inst %>% 
+  mutate(inst_id = as.character(inst_id),
+         inst_id = if_else(is.na(inst_id), "0", inst_id)) %>% 
+  select(-inst_name, -NAME, -STABBR, -State_Providence, -Country)
+  
 #save final matched dataset----
-write_csv(all_inst_data, "data/final_survey_inst_data_2019-2022.csv")
+write_csv(all_inst_data, paste0("output/final_survey_inst_data_2019-2022_", 
+                                Sys.Date(),".csv"))
 

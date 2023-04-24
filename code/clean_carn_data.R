@@ -25,7 +25,7 @@ raw_carnegie_inst_names <- raw_carnegie_data %>% select(NAME)
 carnegie_inst_names <- carnegie_data %>% select(NAME)
 
 #Institution names for both colleges & universities (e.g., Temple College & Temple University)
-drop_inst <- c("Princeton Theological|National Institutes Of Health|American Museum|Allen Institute|Rochester Institute Of Technology|Connecticut|Scripps|Heidelberg| Northwestern|Cornell|Boston|Florida|Wesleyan|Georgetown|Northwest|Temple") 
+drop_inst <- c("Smith|Centre |Rochester.*|Princeton|Louisiana|Denison|Cabrini|Allen|Lawrence|Princeton Theological|National|American|Allen Institute|Rochester Ins.*|Connecticut|Scripps|Heidelberg| Northwestern|Cornell|Boston|Florida|Wesleyan|Georgetown|Northwest|Temple|Pacific|Seattle|Illinois") 
 
 #colleges: generate unique lists of college names to compare against responses using stringr----
 mult_loc_college_last_list <- raw_carnegie_inst_names %>% 
@@ -88,6 +88,9 @@ x_uni_list <- carnegie_inst_names %>%
   rbind(., state_uni_list) %>% 
   pull(NAME) %>% str_c(collapse = "|")
 
+mult_loc_uni_of_list <- str_c(mult_loc_uni_of_list, 
+                               "|Northern Iowa")
+
 #option to save clean data----
-#write_csv(carnegie_data, paste0("output/cleaned_carnegie_data_", 
-#                                Sys.Date(), ".csv"))
+write_csv(carnegie_data, paste0("output/cleaned_carnegie_data_", 
+                                Sys.Date(), ".csv"))

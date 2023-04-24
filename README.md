@@ -6,10 +6,14 @@ editor_options:
 
 # Wrangling institution lists
 
-The code and data in this repo were used to convert respondent-provided lists 
+The code and data in this repo were used to convert lists 
 of institutions into a database containing institution-specific data (e.g., 
 location, doctoral degrees awarded). This README file contains a brief 
 description of the purpose for each code file along the required and output files.
+
+## `code/`
+
+The `.R` files in this folder were used to process institutions provided as responses to job-market surveys. 
 
 ### `get_full_inst_list.R`
 
@@ -20,15 +24,7 @@ postdoc).
 
 *Data Required:*
 
-- `data/2019-2020_raw_job_survey_data.csv`
-
-- `data/2020-2021_raw_job_survey_data.csv`
-
-- `data/2021-2022_raw_job_survey_data.csv`
-
-- `data/question_legend_19.csv` (File to match questions with appropriate column names for 2019-2020 survey data.)
-
-- `data/question_legend_20-22.csv` (File to match questions with appropriate column names for 2020-2022 survey data.)
+- `data/merged_data_19-22.csv` (CSV file with all three survey years combined.)
 
 *Output:*
 
@@ -136,7 +132,15 @@ of institutions.
 - `output/final_survey_inst_data_2019-2022_date-generated.csv` (Final data set for analysis of the 2019-2022 job market survey results.)
 
 
+## `code/herc_inst`
 
+The `.R` files in this folder were used to process institutions provided in job-ad data provided by the Higher Education Research Consortium (HERC). 
+
+### `parallelize_herc_final_dataset.R`
+
+### `wrangle_herc_inst_names.R`
+
+### `univ_list.R`
 
 
 
